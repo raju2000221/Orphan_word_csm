@@ -1,7 +1,10 @@
+document.getElementById("year").innerText = new Date().getFullYear();
+
 let originalContent = []; // Ensure this is accessible globally in your content script
 
 const checkButton = document.getElementById("check");
 const resetButton = document.getElementById("reset");
+const statusp = document.getElementById("status");
 
 // Event listener for when the user clicks the "Check" button
 checkButton.addEventListener("click", () => {
@@ -26,51 +29,66 @@ resetButton.addEventListener("click", () => {
   });
 });
 
-// Function to change the button text
+// Function to change the button text and enable/disable reset based on original content
 function state(text) {
-  checkButton.innerHTML = text;
+  statusp.innerHTML = text;
 }
 
 // Function to fetch content and highlight spelling errors
 function fetchContentAndHighlight() {
-  // Define `originalContent` in the tab's context to make it global for this script
   window.originalContent = window.originalContent || [];
   const content = [];
-  const tagsToCheck = ["h1", "h2", "h3", "h4", "h5", "p", "span", "li"];
+  const tagsToCheck = [
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "p",
+    "span",
+    "li",
+    "strong",
+    "a",
+    ".faq-block summary",
+    ".faq-block .expand",
+  ];
 
   tagsToCheck.forEach((tag) => {
-    let mainsiteContent =
-      document.getElementById("mainSiteContent") ||
-      document.querySelector("main");
+    let mainsiteContent = document.querySelector("div");
     if (mainsiteContent) {
       mainsiteContent.querySelectorAll(tag).forEach((element) => {
-        // Store original content with element reference and its HTML if not already stored
         if (!window.originalContent.some((item) => item.element === element)) {
           window.originalContent.push({
             element: element,
             originalHTML: element.innerHTML,
           });
         }
+        content.push({ text: element.innerText, element: element });
+      });
 
-        content.push({
-          text: element.innerText,
-          element: element,
+      // Handle raw text inside div elements
+      mainsiteContent.querySelectorAll("div").forEach((divElement) => {
+        divElement.childNodes.forEach((child) => {
+          if (
+            child.nodeType === Node.TEXT_NODE &&
+            child.nodeValue.trim() !== ""
+          ) {
+            // Store the text content inside div
+            content.push({ text: child.nodeValue, element: divElement });
+          }
         });
       });
     } else {
-      console.error(
+      window.alert(
         "Neither #mainSiteContent nor <main> tag was found in the DOM."
       );
     }
   });
 
-  // Send content to the backend API to check for spelling errors
   fetch("https://raju.marketalyzer.com/spelling-check", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: content.map((item) => item.text).join(" "),
-    }),
+    body: JSON.stringify({ text: content.map((item) => item.text).join(" ") }),
   })
     .then((response) => response.json())
     .then((data) => {
@@ -78,27 +96,33 @@ function fetchContentAndHighlight() {
     })
     .catch((error) => console.error("Error:", error))
     .finally(() => {
-      // Communicate back to the popup to reset button text
       chrome.runtime.sendMessage({ action: "resetButton" });
     });
 
   function highlightSpellingErrors(highlightedText, content) {
-    const correctWords = highlightedText.split(" ").map(cleanWord);
+    const wrongWords = highlightedText.split(" ").map(cleanWord);
     function cleanWord(word) {
       return word.replace(/[^\w\s]|_/g, "");
     }
     content.forEach((item) => {
-      const wordsInElement = item.text.split(" ");
+      const cleanedText = item.text.replace(/&nbsp;|[\s]+/g, " ").trim();
+      const wordsInElement = cleanedText.split(/\s+/);
       let highlightedTextForElement = "";
 
       wordsInElement.forEach((word) => {
         const cleanedWord = cleanWord(word);
-        highlightedTextForElement += correctWords.includes(cleanedWord)
+        highlightedTextForElement += wrongWords.includes(cleanedWord)
           ? ` <span style="background-color: yellow; color: red;">${word}</span>`
           : ` ${word}`;
       });
 
-      item.element.innerHTML = highlightedTextForElement.trim();
+      // Only modify the inner HTML if it's not a raw text node
+      if (item.element.nodeType === Node.ELEMENT_NODE) {
+        item.element.innerHTML = highlightedTextForElement.trim();
+      } else if (item.element.nodeType === Node.TEXT_NODE) {
+        // If it's a raw text node, modify it directly
+        item.element.nodeValue = highlightedTextForElement.trim();
+      }
     });
   }
 }
@@ -115,6 +139,6 @@ function resetContent() {
 // Listen for message to reset button text in the popup
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === "resetButton") {
-    state("Check");
+    state("Ready to check your content.");
   }
 });

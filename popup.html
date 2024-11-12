@@ -7,20 +7,27 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
+        background-color: #fff;
         color: #333;
-        width: 320px;
+        width: 500px;
+        padding: 0;
+        margin: 0;
+      }
+
+      .header {
+        background-color: #f9f9f9;
+        position: sticky;
+        top: 0;
         padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .button-container {
-        width: 100%;
         display: flex;
         flex-direction: row;
         gap: 10px;
+        margin-bottom: 10px;
       }
 
       button {
@@ -46,20 +53,50 @@
         text-align: center;
       }
 
-      small {
+      .author {
         margin-top: 10px;
         color: #3333336a;
+        text-align: center;
+        display: block;
+      }
+
+      .Instructions {
+        text-align: center;
+      }
+
+      /* Scrollable images container */
+      #imagesContainer {
+        max-height: 400px; /* Adjust as needed */
+        overflow-y: auto;
+        padding: 0 20px;
+        background-color: #ece9e9;
       }
     </style>
   </head>
   <body>
-    <div class="button-container">
-      <button id="check">Check Content</button>
-      <button id="reset">Reset</button>
+    <div class="header">
+      <div class="button-container">
+        <button id="check">Check Content</button>
+        <button id="reset">Back to clean</button>
+      </div>
+      <div id="status">Ready to check your content.</div>
+      <small class="author"
+        >© <span id="year"></span> Raju Islam. All rights reserved.</small
+      >
+
+      <p class="Instructions">
+        <b>Instructions:</b> To load all images, please scroll to the bottom of
+        the page and then click the
+        <em
+          ><u><b>Check Content</b></u></em
+        >
+        button.
+      </p>
     </div>
 
-    <div id="status">Ready to check your content.</div>
-    <small>© <span id="year"></span> Raju Islam. All rights reserved.</small>
+    <div id="imagesContainer">
+      <!-- Images will be displayed here and will be scrollable -->
+    </div>
 
     <script src="popup.js"></script>
   </body>
